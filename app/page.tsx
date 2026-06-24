@@ -2,6 +2,7 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import Chrome from "@/components/Chrome";
+import DetailSheet from "@/components/DetailSheet";
 import { Pill, Spinner, Toast } from "@/components/ui";
 
 type Home = { kpis: { inspectedToday: number; pending: number }; recent: any[] };
@@ -10,6 +11,7 @@ export default function HomePage() {
   const router = useRouter();
   const [data, setData] = useState<Home | null>(null);
   const [toast, setToast] = useState("");
+  const [detail, setDetail] = useState<{ kind: string; id: string } | null>(null);
 
   useEffect(() => {
     fetch("/api/home").then((r) => r.json()).then(setData).catch(() => setData({ kpis: { inspectedToday: 0, pending: 0 }, recent: [] }));
@@ -35,7 +37,7 @@ export default function HomePage() {
           <div className="card" style={{ padding: "4px 14px" }}>
             {data.recent.length === 0 && <div style={{ padding: "18px 0", color: "var(--hint)", fontSize: 13, textAlign: "center" }}>아직 점검 기록이 없습니다.</div>}
             {data.recent.map((r, i) => (
-              <div key={i} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "12px 0", borderTop: i ? "1px solid var(--bd)" : "none", gap: 10 }}>
+              <div key={i} onClick={() => r.id && setDetail({ kind: r.kind, id: r.id })} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "12px 0", borderTop: i ? "1px solid var(--bd)" : "none", gap: 10, cursor: "pointer" }}>
                 <div style={{ minWidth: 0 }}>
                   <div style={{ fontSize: 14, fontWeight: 500, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{r.title}</div>
                   <div style={{ fontSize: 12, color: "var(--sub)", marginTop: 2 }}>{r.sub}</div>
@@ -47,6 +49,7 @@ export default function HomePage() {
         </div>
       )}
       <Toast msg={toast} />
+      <DetailSheet sel={detail} onClose={() => setDetail(null)} />
     </Chrome>
   );
 }
