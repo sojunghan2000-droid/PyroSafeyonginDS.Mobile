@@ -9,8 +9,12 @@ type Result = "양호" | "불량" | "오동작";
 
 function InspectInner() {
   const router = useRouter();
-  const eq = useSearchParams().get("eq") ?? "";
-  const [equip, setEquip] = useState<any>(null);
+  const params = useSearchParams();
+  const eq = params.get("eq") ?? "";
+  const taskId = params.get("task") ?? "";
+  const isTask = Boolean(taskId);
+
+  const [subject, setSubject] = useState<any>(null);
   const [err, setErr] = useState("");
   const [toast, setToast] = useState("");
   const [result, setResult] = useState<Result | null>(null);
@@ -23,14 +27,23 @@ function InspectInner() {
   const [busy, setBusy] = useState(false);
 
   useEffect(() => {
+    if (isTask) {
+      fetch(`/api/task/${encodeURIComponent(taskId)}`).then(async (r) => {
+        const d = await r.json();
+        if (!r.ok) { setErr(d.error || "조회 실패"); return; }
+        setSubject({ task: true, title: d.label, line: `${d.floor} / ${d.zone}구역 · ${d.taskType}`, category: d.label });
+      }).catch(() => setErr("네트워크 오류"));
+      return;
+    }
     if (!eq) { setErr("장비 ID가 없습니다."); return; }
     fetch(`/api/equipment/${encodeURIComponent(eq)}`).then(async (r) => {
       const d = await r.json();
       if (!r.ok) { setErr(d.error || "조회 실패"); return; }
-      setEquip(d.equipment);
+      const e = d.equipment;
+      setSubject({ task: false, title: `${e.equipment_id} · ${e.equipment_name}`, line: `${e.floor} / ${e.zone}구역 · ${e.category} · ${e.serial}`, category: e.category, qr_status: e.qr_status });
       if (d.justAssigned) setToast(`QR 첫 스캔 인식 — ${eq} 부착 완료(ASSIGNED) 전환`);
     }).catch(() => setErr("네트워크 오류"));
-  }, [eq]);
+  }, [eq, taskId, isTask]);
 
   function toggleType(t: string) {
     setTypes((p) => (p.includes(t) ? p.filter((x) => x !== t) : [...p, t]));
@@ -44,8 +57,8 @@ function InspectInner() {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          equipmentId: eq, result, inspectionTypes: types, issue,
-          malfunctionDetail: malDetail,
+          equipmentId: isTask ? undefined : eq, taskId: isTask ? taskId : undefined,
+          result, inspectionTypes: types, issue, malfunctionDetail: malDetail,
           immediate: showImmediate && imNote.trim() ? { note: imNote, confirmer: imConfirmer } : null,
         }),
       });
@@ -53,8 +66,7 @@ function InspectInner() {
       if (!r.ok) { setToast(d.error || "저장 실패"); return; }
       const msg = result === "불량" ? `저장 완료 · 통보서 ${d.noticeNo} 발급` : `저장 완료 (${result})`;
       sessionStorage.setItem("ps_toast", msg);
-      // 양호는 홈으로, 불량(통보서 발급)·오동작은 추적을 위해 작업 조치 관리로 이동
-      router.replace(result === "양호" ? "/" : "/actions");
+      router.replace(isTask ? "/inspection" : result === "양호" ? "/" : "/actions");
     } catch {
       setToast("네트워크 오류가 발생했습니다.");
     } finally {
@@ -63,15 +75,17 @@ function InspectInner() {
   }
 
   if (err) return <Chrome title="점검 입력" active="inspect" back><div style={{ color: "var(--bad)", fontSize: 14, padding: "20px 0" }}>{err}</div></Chrome>;
-  if (!equip) return <Chrome title="점검 입력" active="inspect" back><Spinner /></Chrome>;
+  if (!subject) return <Chrome title="점검 입력" active="inspect" back><Spinner /></Chrome>;
 
   return (
     <Chrome title="점검 입력" active="inspect" back>
       <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
         <div style={{ background: "#f8fafc", borderRadius: 12, padding: 14 }}>
-          <div style={{ fontSize: 15, fontWeight: 600 }}>{equip.equipment_id} · {equip.equipment_name}</div>
-          <div style={{ fontSize: 12, color: "var(--sub)", marginTop: 3 }}>{equip.floor} / {equip.zone}구역 · {equip.category} · {equip.serial}</div>
-          <div style={{ marginTop: 8 }}><Pill label={equip.qr_status === "ASSIGNED" ? "QR 부착확인 ASSIGNED" : "부착 대기 PENDING"} /></div>
+          <div style={{ fontSize: 15, fontWeight: 600 }}>{subject.title}</div>
+          <div style={{ fontSize: 12, color: "var(--sub)", marginTop: 3 }}>{subject.line}</div>
+          <div style={{ marginTop: 8 }}>
+            <Pill label={subject.task ? "점검 대상" : subject.qr_status === "ASSIGNED" ? "QR 부착확인 ASSIGNED" : "부착 대기 PENDING"} />
+          </div>
         </div>
 
         <div style={{ fontSize: 13, color: "var(--sub)", fontWeight: 500 }}>점검 결과</div>
@@ -115,7 +129,7 @@ function InspectInner() {
 
         {result === "오동작" && (
           <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-            <div style={{ fontSize: 12, color: "var(--sub)", fontWeight: 500 }}>오동작 내용 · 시설구분 {equip.category}</div>
+            <div style={{ fontSize: 12, color: "var(--sub)", fontWeight: 500 }}>오동작 내용 · 시설구분 {subject.category}</div>
             <textarea value={malDetail} onChange={(e) => setMalDetail(e.target.value)} rows={3} placeholder="오동작 내용을 입력하세요 (조치는 작업 조치 관리에서)" style={{ padding: 12, fontSize: 14, resize: "none" }} />
           </div>
         )}
