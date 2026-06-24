@@ -55,7 +55,7 @@ export default function Scan() {
   }
 
   return (
-    <Chrome title="QR 스캔" active="scan" back>
+    <Chrome title="QR 스캔" active="inspect" back>
       <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 16 }}>
         <div id="reader" style={{ width: "100%", maxWidth: 340, aspectRatio: "1", background: "var(--dark)", borderRadius: 16, overflow: "hidden", display: "flex", alignItems: "center", justifyContent: "center" }}>
           {camErr && (

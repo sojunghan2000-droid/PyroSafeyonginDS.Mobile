@@ -6,7 +6,7 @@ function Icon({ name, on }: { name: string; on: boolean }) {
   const c = on ? "var(--brand)" : "var(--hint)";
   const p: Record<string, string> = {
     home: "M3 11l9-8 9 8M5 10v10h5v-6h4v6h5V10",
-    scan: "M4 7V4h3M20 7V4h-3M4 17v3h3M20 17v3h-3M7 12h10",
+    inspect: "M4 6a1 1 0 0 1 1-1h14a1 1 0 0 1 1 1v13a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1zM4 9h16M8 3v3M16 3v3M9 14l2 2 4-4",
     check: "M9 11l3 3 8-8M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11",
   };
   return (
@@ -18,7 +18,7 @@ function Icon({ name, on }: { name: string; on: boolean }) {
 
 export default function Chrome({
   title, active, back, children,
-}: { title?: string; active?: "home" | "scan" | "check"; back?: boolean; children: React.ReactNode }) {
+}: { title?: string; active?: "home" | "inspect" | "check"; back?: boolean; children: React.ReactNode }) {
   const router = useRouter();
   const [name, setName] = useState("");
 
@@ -53,7 +53,7 @@ export default function Chrome({
 
       {active && (
         <nav style={{ position: "sticky", bottom: 0, background: "var(--white)", borderTop: "1px solid var(--bd)", display: "flex", padding: "8px 0 14px" }}>
-          {([["home", "홈", "/"], ["scan", "스캔", "/scan"], ["check", "조치", "/actions"]] as const).map(([k, label, href]) => (
+          {([["home", "홈", "/"], ["inspect", "오늘점검", "/inspection"], ["check", "조치", "/actions"]] as const).map(([k, label, href]) => (
             <button key={k} onClick={() => router.push(href)} style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", gap: 3, background: "none", border: "none", cursor: "pointer" }}>
               <Icon name={k} on={active === k} />
               <span style={{ fontSize: 11, color: active === k ? "var(--brand-tx)" : "var(--sub)", fontWeight: active === k ? 500 : 400 }}>{label}</span>

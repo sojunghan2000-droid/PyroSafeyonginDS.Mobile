@@ -1,6 +1,5 @@
 "use client";
 import { useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
 import Chrome from "@/components/Chrome";
 import DetailSheet from "@/components/DetailSheet";
 import { Pill, Spinner, Toast } from "@/components/ui";
@@ -8,7 +7,6 @@ import { Pill, Spinner, Toast } from "@/components/ui";
 type Home = { kpis: { inspectedToday: number; pending: number }; recent: any[] };
 
 export default function HomePage() {
-  const router = useRouter();
   const [data, setData] = useState<Home | null>(null);
   const [toast, setToast] = useState("");
   const [detail, setDetail] = useState<{ kind: string; id: string } | null>(null);
@@ -27,11 +25,6 @@ export default function HomePage() {
             <Stat label="오늘 점검" val={data.kpis.inspectedToday} />
             <Stat label="조치 대기" val={data.kpis.pending} danger />
           </div>
-
-          <button onClick={() => router.push("/scan")} className="btn-primary" style={{ padding: "17px", fontSize: 16, border: "none", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: 8 }}>
-            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M4 7V4h3M20 7V4h-3M4 17v3h3M20 17v3h-3M7 12h10" /></svg>
-            QR 스캔 점검
-          </button>
 
           <div style={{ fontSize: 13, color: "var(--sub)", fontWeight: 500, marginTop: 4 }}>최근 점검</div>
           <div className="card" style={{ padding: "4px 14px" }}>

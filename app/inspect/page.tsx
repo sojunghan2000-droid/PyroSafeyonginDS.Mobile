@@ -62,11 +62,11 @@ function InspectInner() {
     }
   }
 
-  if (err) return <Chrome title="점검 입력" active="scan" back><div style={{ color: "var(--bad)", fontSize: 14, padding: "20px 0" }}>{err}</div></Chrome>;
-  if (!equip) return <Chrome title="점검 입력" active="scan" back><Spinner /></Chrome>;
+  if (err) return <Chrome title="점검 입력" active="inspect" back><div style={{ color: "var(--bad)", fontSize: 14, padding: "20px 0" }}>{err}</div></Chrome>;
+  if (!equip) return <Chrome title="점검 입력" active="inspect" back><Spinner /></Chrome>;
 
   return (
-    <Chrome title="점검 입력" active="scan" back>
+    <Chrome title="점검 입력" active="inspect" back>
       <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
         <div style={{ background: "#f8fafc", borderRadius: 12, padding: 14 }}>
           <div style={{ fontSize: 15, fontWeight: 600 }}>{equip.equipment_id} · {equip.equipment_name}</div>
