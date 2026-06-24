@@ -23,12 +23,14 @@ export async function GET() {
   const isGood = (d: any) => (d.issue ?? "").trim().startsWith("양호");
   const recent = [
     ...D.map((d) => ({
+      kind: "def", id: d.deficiency_id,
       ts: String(d.inspection_date),
       title: isGood(d) ? `${d.floor}/${d.zone} 점검` : d.issue,
       sub: `${d.floor}/${d.zone} · ${String(d.inspection_date).slice(0, 10)}`,
       result: isGood(d) ? "양호" : "불량",
     })),
     ...M.map((m) => ({
+      kind: "mal", id: m.malfunction_id,
       ts: String(m.occurred_on),
       title: m.detail,
       sub: `${m.category} · ${String(m.occurred_on).slice(0, 10)}`,
