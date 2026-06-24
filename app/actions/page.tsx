@@ -1,6 +1,7 @@
 "use client";
 import { useCallback, useEffect, useState } from "react";
 import Chrome from "@/components/Chrome";
+import DetailSheet from "@/components/DetailSheet";
 import { Pill, Spinner, Toast } from "@/components/ui";
 
 const FILTERS: [string, string][] = [
@@ -18,6 +19,7 @@ export default function Actions() {
   const [sort, setSort] = useState<"newest" | "oldest">("newest");
   const [items, setItems] = useState<any[] | null>(null);
   const [kpis, setKpis] = useState<Kpis | null>(null);
+  const [detail, setDetail] = useState<{ kind: string; id: string } | null>(null);
   const [open, setOpen] = useState("");
   const [note, setNote] = useState("");
   const [confirmer, setConfirmer] = useState("");
@@ -102,12 +104,14 @@ export default function Actions() {
             const key = it.kind + it.id;
             return (
               <div key={key} className="card" style={{ padding: 14 }}>
-                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 10 }}>
-                  <div style={{ fontSize: 14, fontWeight: 600, minWidth: 0 }}>{it.title}</div>
-                  <Pill label={it.status} />
-                </div>
-                <div style={{ fontSize: 12, color: "var(--sub)", margin: "5px 0 10px" }}>
-                  {it.sub} · {it.date}{it.hasPhoto ? " · 📷" : ""}
+                <div onClick={() => setDetail({ kind: it.kind, id: it.id })} style={{ cursor: "pointer" }}>
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 10 }}>
+                    <div style={{ fontSize: 14, fontWeight: 600, minWidth: 0 }}>{it.title}</div>
+                    <Pill label={it.status} />
+                  </div>
+                  <div style={{ fontSize: 12, color: "var(--sub)", margin: "5px 0 10px" }}>
+                    {it.sub} · {it.date}{it.hasPhoto ? " · 📷" : ""}
+                  </div>
                 </div>
                 {it.pending && (
                   open === key ? (
@@ -139,6 +143,7 @@ export default function Actions() {
         </div>
       )}
       <Toast msg={toast} type={toast.includes("입력") || toast.includes("실패") ? "bad" : "ok"} />
+      <DetailSheet sel={detail} onClose={() => setDetail(null)} />
     </Chrome>
   );
 }
