@@ -21,13 +21,18 @@ export async function GET(_req: NextRequest, ctx: { params: Promise<{ kind: stri
       const { data: signed } = await db.storage.from(BUCKET).createSignedUrl(d.action_photo_path, 600);
       photoUrl = signed?.signedUrl ?? null;
     }
+    let photoUrl2: string | null = null;
+    if (d.action_photo_path2) {
+      const { data: signed2 } = await db.storage.from(BUCKET).createSignedUrl(d.action_photo_path2, 600);
+      photoUrl2 = signed2?.signedUrl ?? null;
+    }
     return NextResponse.json({
       kind: "def", id: d.deficiency_id, result: good ? "양호" : "불량", status,
       date: String(d.inspection_date).slice(0, 10), location: `${d.floor}/${d.zone}`,
       inspector: d.inspector ?? null, confirmer: d.confirmer ?? null,
       inspectionTypes: d.inspection_types ?? [], content: d.issue ?? "",
       noticeNo: d.notice_no ?? null, taskId: d.task_id ?? null,
-      action: { done: Boolean(d.action_done), at: d.action_at ? String(d.action_at).slice(0, 10) : null, note: d.action_note ?? null, photoUrl },
+      action: { done: Boolean(d.action_done), at: d.action_at ? String(d.action_at).slice(0, 10) : null, note: d.action_note ?? null, photoUrl, photoUrl2 },
     });
   }
 

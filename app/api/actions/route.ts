@@ -58,7 +58,7 @@ export async function GET(req: NextRequest) {
 export async function POST(req: NextRequest) {
   const user = await getUser();
   if (!user) return NextResponse.json({ error: "로그인이 필요합니다." }, { status: 401 });
-  const { kind, id, note, confirmer, actionDate, photoPath } = await req.json();
+  const { kind, id, note, confirmer, actionDate, photoPath, photoPath2 } = await req.json();
   if (!note?.trim()) return NextResponse.json({ error: "조치 내용을 입력해 주세요." }, { status: 400 });
   const db = admin();
   const at = (actionDate && String(actionDate).slice(0, 10)) || today();
@@ -69,9 +69,11 @@ export async function POST(req: NextRequest) {
       action_done: true, action_at: at, action_note: note, confirmer: who, resolution: "완료",
     };
     if (photoPath) payload.action_photo_path = photoPath;
+    if (photoPath2) payload.action_photo_path2 = photoPath2;
     await db.from("deficiencies").update(payload).eq("deficiency_id", id);
     const { data: d } = await db.from("deficiencies").select("notice_no").eq("deficiency_id", id).maybeSingle();
     if (d?.notice_no) {
+      // notices 테이블엔 action_photo_path2 컬럼이 없음 (Streamlit record_deficiency_action과 동일 제약)
       const np: Record<string, unknown> = { action_done: true, action_at: at, action_note: note, confirmer: who };
       if (photoPath) np.action_photo_path = photoPath;
       await db.from("notices").update(np).eq("notice_no", d.notice_no);

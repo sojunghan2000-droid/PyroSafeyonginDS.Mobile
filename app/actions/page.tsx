@@ -25,6 +25,7 @@ export default function Actions() {
   const [confirmer, setConfirmer] = useState("");
   const [actionDate, setActionDate] = useState(todayStr());
   const [file, setFile] = useState<File | null>(null);
+  const [file2, setFile2] = useState<File | null>(null);
   const [toast, setToast] = useState("");
   const [busy, setBusy] = useState(false);
 
@@ -43,7 +44,16 @@ export default function Actions() {
   }, []);
 
   function openForm(key: string) {
-    setOpen(key); setNote(""); setConfirmer(""); setActionDate(todayStr()); setFile(null);
+    setOpen(key); setNote(""); setConfirmer(""); setActionDate(todayStr()); setFile(null); setFile2(null);
+  }
+
+  async function uploadPhoto(f: File, id: string): Promise<string> {
+    const fd = new FormData();
+    fd.append("file", f); fd.append("id", id);
+    const up = await fetch("/api/upload", { method: "POST", body: fd });
+    const ud = await up.json();
+    if (!up.ok) throw new Error(ud.error || "사진 업로드 실패");
+    return ud.path;
   }
 
   async function submit(it: any) {
@@ -51,22 +61,21 @@ export default function Actions() {
     setBusy(true);
     try {
       let photoPath: string | undefined;
-      if (file && it.kind === "def") {
-        const fd = new FormData();
-        fd.append("file", file); fd.append("id", it.id);
-        const up = await fetch("/api/upload", { method: "POST", body: fd });
-        const ud = await up.json();
-        if (!up.ok) { setToast(ud.error || "사진 업로드 실패"); return; }
-        photoPath = ud.path;
+      let photoPath2: string | undefined;
+      if (it.kind === "def") {
+        try {
+          if (file) photoPath = await uploadPhoto(file, it.id);
+          if (file2) photoPath2 = await uploadPhoto(file2, `${it.id}-2`);
+        } catch (e: any) { setToast(e.message || "사진 업로드 실패"); return; }
       }
       const r = await fetch("/api/actions", {
         method: "POST", headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ kind: it.kind, id: it.id, note, confirmer, actionDate, photoPath }),
+        body: JSON.stringify({ kind: it.kind, id: it.id, note, confirmer, actionDate, photoPath, photoPath2 }),
       });
       const d = await r.json();
       if (!r.ok) { setToast(d.error || "저장 실패"); return; }
       setOpen("");
-      setToast(photoPath ? "조치 완료 (사진 첨부됨)" : "조치 완료로 전환되었습니다.");
+      setToast(photoPath || photoPath2 ? "조치 완료 (사진 첨부됨)" : "조치 완료로 전환되었습니다.");
       setTimeout(() => setToast(""), 3000);
       load(filter, sort);
     } finally { setBusy(false); }
@@ -122,11 +131,18 @@ export default function Actions() {
                         <input type="date" value={actionDate} onChange={(e) => setActionDate(e.target.value)} style={{ padding: "10px 12px", fontSize: 14 }} />
                       </div>
                       {it.kind === "def" && (
-                        <label style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 13, color: "var(--sub)", padding: "2px 2px" }}>
-                          <span style={{ padding: "8px 12px", border: "1px solid var(--bd)", borderRadius: 8, background: "var(--white)", cursor: "pointer", whiteSpace: "nowrap" }}>📷 사진 선택</span>
-                          <input type="file" accept="image/*" capture="environment" onChange={(e) => setFile(e.target.files?.[0] ?? null)} style={{ display: "none" }} />
-                          <span style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{file ? file.name : "선택 안 함"}</span>
-                        </label>
+                        <>
+                          <label style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 13, color: "var(--sub)", padding: "2px 2px" }}>
+                            <span style={{ padding: "8px 12px", border: "1px solid var(--bd)", borderRadius: 8, background: "var(--white)", cursor: "pointer", whiteSpace: "nowrap" }}>📷 사진 선택</span>
+                            <input type="file" accept="image/*" capture="environment" onChange={(e) => setFile(e.target.files?.[0] ?? null)} style={{ display: "none" }} />
+                            <span style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{file ? file.name : "선택 안 함"}</span>
+                          </label>
+                          <label style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 13, color: "var(--sub)", padding: "2px 2px" }}>
+                            <span style={{ padding: "8px 12px", border: "1px solid var(--bd)", borderRadius: 8, background: "var(--white)", cursor: "pointer", whiteSpace: "nowrap" }}>📷 사진 선택 2</span>
+                            <input type="file" accept="image/*" capture="environment" onChange={(e) => setFile2(e.target.files?.[0] ?? null)} style={{ display: "none" }} />
+                            <span style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{file2 ? file2.name : "선택 안 함 (선택)"}</span>
+                          </label>
+                        </>
                       )}
                       <div style={{ display: "flex", gap: 8 }}>
                         <button onClick={() => setOpen("")} style={{ flex: 1, padding: 11, background: "var(--white)", border: "1px solid var(--bd)", borderRadius: 10, fontSize: 13, color: "var(--sub)", cursor: "pointer" }}>취소</button>

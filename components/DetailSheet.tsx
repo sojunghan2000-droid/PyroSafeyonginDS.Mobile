@@ -81,6 +81,7 @@ function Body({ d }: { d: any }) {
           <Row label="조치내용" value={d.action.note} />
           <Row label="확인자" value={d.confirmer} />
           {d.action.photoUrl && <Photo url={d.action.photoUrl} />}
+          {d.action.photoUrl2 && <Photo url={d.action.photoUrl2} />}
         </div>
       )}
     </div>
