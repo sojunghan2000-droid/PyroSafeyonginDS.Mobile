@@ -35,10 +35,16 @@ export default function Inspection() {
   return (
     <Chrome title="오늘점검" active="inspect">
       <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
-        <button onClick={() => router.push("/scan")} className="btn-primary" style={{ padding: "17px", fontSize: 16, border: "none", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: 8 }}>
-          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M4 7V4h3M20 7V4h-3M4 17v3h3M20 17v3h-3M7 12h10" /></svg>
-          QR 스캔으로 점검 시작
-        </button>
+        <div style={{ display: "flex", gap: 10 }}>
+          <button onClick={() => router.push("/pick")} className="btn-primary" style={{ flex: 1, padding: "17px", fontSize: 15, border: "none", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: 8 }}>
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z" /><circle cx="12" cy="13" r="4" /></svg>
+            카메라로 점검 추가
+          </button>
+          <button onClick={() => router.push("/scan")} style={{ flex: 1, padding: "17px", fontSize: 15, background: "var(--white)", border: "1px solid var(--bd)", borderRadius: 12, color: "var(--ink)", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: 8 }}>
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--ink)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M4 7V4h3M20 7V4h-3M4 17v3h3M20 17v3h-3M7 12h10" /></svg>
+            QR 스캔
+          </button>
+        </div>
 
         <div style={{ display: "flex", gap: 8 }}>
           <input value={manual} onChange={(e) => setManual(e.target.value)} placeholder="장비 ID 직접 입력 (예: EQ-0006)" onKeyDown={(e) => e.key === "Enter" && go()} style={{ flex: 1, padding: "12px 14px", fontSize: 14 }} />

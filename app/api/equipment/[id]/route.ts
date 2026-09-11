@@ -15,5 +15,16 @@ export async function GET(_req: NextRequest, ctx: { params: Promise<{ id: string
     data.qr_status = "ASSIGNED";
     justAssigned = true;
   }
-  return NextResponse.json({ equipment: data, justAssigned });
+
+  // 진행 중인 점검 회차 중 이 장비 위치가 포함된 것 — 신규 점검 등록 시 자동/선택 연결용.
+  const { data: taskRows } = await db
+    .from("inspection_tasks")
+    .select("task_id, round_id, task_type, due_date, status")
+    .not("round_id", "is", null)
+    .eq("excluded", false)
+    .neq("status", "Completed")
+    .ilike("equipment_label", `%${data.location_id}%`);
+  const openTasks = taskRows ?? [];
+
+  return NextResponse.json({ equipment: data, justAssigned, openTasks });
 }

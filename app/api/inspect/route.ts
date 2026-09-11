@@ -7,8 +7,10 @@ export async function POST(req: NextRequest) {
   if (!user) return NextResponse.json({ error: "로그인이 필요합니다." }, { status: 401 });
 
   const body = await req.json();
-  const { equipmentId, taskId, result, issue, malfunctionDetail, immediate } = body;
+  const { equipmentId, taskId, result, issue, malfunctionDetail, immediate, photoPath, photoPath2, matchedTaskId } = body;
   const inspectionTypes: string[] = body.inspectionTypes?.length ? body.inspectionTypes : ["임시소방시설"];
+  const CONTAINER_TYPE = "가설컨테이너 사무실 점검";
+  const linkedTaskId: string | null = taskId ?? matchedTaskId ?? null;
   const db = admin();
   const t = today();
   const inspector = user.name;
@@ -40,7 +42,7 @@ export async function POST(req: NextRequest) {
     await db.from("deficiencies").insert({
       deficiency_id: id, inspection_date: t, inspector, floor, zone, inspection_types: inspectionTypes,
       issue: "양호", resolution: "완료", confirmer: inspector, notice_no: null,
-      task_id: taskId ?? null, action_done: true, action_at: t, action_note: "",
+      task_id: linkedTaskId, action_done: true, action_at: t, action_note: "",
     });
     await afterSave("PASS");
     return NextResponse.json({ ok: true, result, deficiencyId: id });
@@ -48,19 +50,24 @@ export async function POST(req: NextRequest) {
 
   if (result === "불량") {
     if (!issue?.trim()) return NextResponse.json({ error: "지적사항을 입력해 주세요." }, { status: 400 });
+    if (!taskId && inspectionTypes.includes(CONTAINER_TYPE) && !photoPath) {
+      return NextResponse.json({ error: "가설컨테이너 사무실 점검은 조치 전 사진이 필수입니다." }, { status: 400 });
+    }
     const done = Boolean(immediate?.note?.trim());
     const noticeNo = await nextNoticeNo(t);
     await db.from("notices").insert({
       notice_no: noticeNo, inspection_date: t, floor, zone, inspection_type: inspectionTypes[0], issue,
       photo_path: null, submitter: inspector, confirmer: done ? immediate.confirmer || inspector : inspector,
-      action_done: done, action_at: done ? t : null, action_note: done ? immediate.note : "",
+      action_done: done, action_at: done ? t : null, action_note: done ? immediate.note : "", task_id: linkedTaskId,
     });
     const id = await nextDeficiencyId();
     await db.from("deficiencies").insert({
       deficiency_id: id, inspection_date: t, inspector, floor, zone, inspection_types: inspectionTypes,
       issue, resolution: done ? "완료" : "불가", confirmer: done ? immediate.confirmer || inspector : null,
-      notice_no: noticeNo, task_id: taskId ?? null,
+      notice_no: noticeNo, task_id: linkedTaskId,
       action_done: done, action_at: done ? t : null, action_note: done ? immediate.note : "",
+      photo_path: !taskId ? (photoPath ?? null) : null,
+      photo_path2: !taskId ? (photoPath2 ?? null) : null,
     });
     await afterSave("FAIL");
     return NextResponse.json({ ok: true, result, deficiencyId: id, noticeNo });

@@ -4,8 +4,10 @@ import { useRouter, useSearchParams } from "next/navigation";
 import Chrome from "@/components/Chrome";
 import { Pill, Spinner, Toast } from "@/components/ui";
 
-const TYPES = ["임시소방시설", "피난로 등", "화기취급감독"];
+const TYPES = ["임시소방시설", "피난로 등", "화기취급감독", "화기작업구간 점검", "가설컨테이너 사무실 점검"];
+const CONTAINER_TYPE = "가설컨테이너 사무실 점검";
 type Result = "양호" | "불량" | "오동작";
+type OpenTask = { task_id: string; round_id: string; task_type: string; due_date: string; status: string };
 
 function InspectInner() {
   const router = useRouter();
@@ -25,6 +27,11 @@ function InspectInner() {
   const [imNote, setImNote] = useState("");
   const [imConfirmer, setImConfirmer] = useState("");
   const [busy, setBusy] = useState(false);
+  const [discFile, setDiscFile] = useState<File | null>(null);
+  const [discFile2, setDiscFile2] = useState<File | null>(null);
+  const [openTasks, setOpenTasks] = useState<OpenTask[]>([]);
+  const [matchedTaskId, setMatchedTaskId] = useState<string | null>(null);
+  const isContainer = types.includes(CONTAINER_TYPE);
 
   useEffect(() => {
     if (isTask) {
@@ -42,6 +49,9 @@ function InspectInner() {
       const e = d.equipment;
       setSubject({ task: false, title: `${e.equipment_id} · ${e.equipment_name}`, line: `${e.floor} / ${e.zone}구역 · ${e.category} · ${e.serial}`, category: e.category, qr_status: e.qr_status });
       if (d.justAssigned) setToast(`QR 첫 스캔 인식 — ${eq} 부착 완료(ASSIGNED) 전환`);
+      const tasks: OpenTask[] = d.openTasks || [];
+      setOpenTasks(tasks);
+      if (tasks.length === 1) setMatchedTaskId(tasks[0].task_id);
     }).catch(() => setErr("네트워크 오류"));
   }, [eq, taskId, isTask]);
 
@@ -49,10 +59,31 @@ function InspectInner() {
     setTypes((p) => (p.includes(t) ? p.filter((x) => x !== t) : [...p, t]));
   }
 
+  async function uploadPhoto(f: File, id: string): Promise<string> {
+    const fd = new FormData();
+    fd.append("file", f); fd.append("id", id);
+    const up = await fetch("/api/upload", { method: "POST", body: fd });
+    const ud = await up.json();
+    if (!up.ok) throw new Error(ud.error || "사진 업로드 실패");
+    return ud.path;
+  }
+
   async function save() {
     if (!result) { setToast("점검 결과를 선택해 주세요."); return; }
+    if (!isTask && result === "불량" && isContainer && !discFile) {
+      setToast("가설컨테이너 사무실 점검은 조치 전 사진이 필수입니다.");
+      return;
+    }
     setBusy(true);
     try {
+      let photoPath: string | undefined;
+      let photoPath2: string | undefined;
+      if (!isTask && result === "불량") {
+        try {
+          if (discFile) photoPath = await uploadPhoto(discFile, `${eq}-disc`);
+          if (discFile2) photoPath2 = await uploadPhoto(discFile2, `${eq}-disc2`);
+        } catch (e: any) { setToast(e.message || "사진 업로드 실패"); return; }
+      }
       const r = await fetch("/api/inspect", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -60,6 +91,8 @@ function InspectInner() {
           equipmentId: isTask ? undefined : eq, taskId: isTask ? taskId : undefined,
           result, inspectionTypes: types, issue, malfunctionDetail: malDetail,
           immediate: showImmediate && imNote.trim() ? { note: imNote, confirmer: imConfirmer } : null,
+          photoPath, photoPath2,
+          matchedTaskId: !isTask ? matchedTaskId : undefined,
         }),
       });
       const d = await r.json();
@@ -88,6 +121,29 @@ function InspectInner() {
           </div>
         </div>
 
+        {!isTask && openTasks.length >= 2 && (
+          <div>
+            <div style={{ fontSize: 12, color: "var(--sub)", fontWeight: 500, marginBottom: 6 }}>어느 회차 점검인가요?</div>
+            <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+              {openTasks.map((t) => (
+                <label key={t.task_id} style={{ display: "flex", alignItems: "center", gap: 8, padding: "9px 12px", border: `1px solid ${matchedTaskId === t.task_id ? "var(--brand)" : "var(--bd)"}`, borderRadius: 10, fontSize: 13, cursor: "pointer" }}>
+                  <input type="radio" checked={matchedTaskId === t.task_id} onChange={() => setMatchedTaskId(t.task_id)} />
+                  {t.round_id} · {t.task_type} · 마감 {t.due_date}
+                </label>
+              ))}
+              <label style={{ display: "flex", alignItems: "center", gap: 8, padding: "9px 12px", border: `1px solid ${matchedTaskId === null ? "var(--brand)" : "var(--bd)"}`, borderRadius: 10, fontSize: 13, cursor: "pointer" }}>
+                <input type="radio" checked={matchedTaskId === null} onChange={() => setMatchedTaskId(null)} />
+                — 회차 미연결 (단독 기록) —
+              </label>
+            </div>
+          </div>
+        )}
+        {!isTask && openTasks.length === 1 && (
+          <div style={{ fontSize: 12, color: "var(--sub)" }}>
+            🔗 이 점검은 {openTasks[0].round_id}({openTasks[0].task_type}) 회차에 연결됩니다.
+          </div>
+        )}
+
         <div style={{ fontSize: 13, color: "var(--sub)", fontWeight: 500 }}>점검 결과</div>
         <div style={{ display: "flex", gap: 8 }}>
           {(["양호", "불량", "오동작"] as Result[]).map((r) => {
@@ -108,6 +164,24 @@ function InspectInner() {
                 return <button key={t} onClick={() => toggleType(t)} style={{ padding: "6px 12px", borderRadius: 999, fontSize: 12, fontWeight: 500, cursor: "pointer", border: `1px solid ${on ? "var(--brand)" : "var(--bd)"}`, background: on ? "var(--brand-bg)" : "var(--white)", color: on ? "var(--brand-tx)" : "var(--sub)" }}>{t}</button>;
               })}
             </div>
+          </div>
+        )}
+
+        {result === "불량" && !isTask && (
+          <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+            <div style={{ fontSize: 12, color: "var(--sub)", fontWeight: 500 }}>
+              조치 전 사진{isContainer ? " (필수)" : " (선택)"}
+            </div>
+            <label style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 13, color: "var(--sub)" }}>
+              <span style={{ padding: "8px 12px", border: "1px solid var(--bd)", borderRadius: 8, background: "var(--white)", cursor: "pointer", whiteSpace: "nowrap" }}>📷 사진 선택</span>
+              <input type="file" accept="image/*" capture="environment" onChange={(e) => setDiscFile(e.target.files?.[0] ?? null)} style={{ display: "none" }} />
+              <span style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{discFile ? discFile.name : "선택 안 함"}</span>
+            </label>
+            <label style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 13, color: "var(--sub)" }}>
+              <span style={{ padding: "8px 12px", border: "1px solid var(--bd)", borderRadius: 8, background: "var(--white)", cursor: "pointer", whiteSpace: "nowrap" }}>📷 사진 선택 2</span>
+              <input type="file" accept="image/*" capture="environment" onChange={(e) => setDiscFile2(e.target.files?.[0] ?? null)} style={{ display: "none" }} />
+              <span style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{discFile2 ? discFile2.name : "선택 안 함 (선택)"}</span>
+            </label>
           </div>
         )}
 
